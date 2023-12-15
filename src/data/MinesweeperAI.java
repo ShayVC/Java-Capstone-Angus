@@ -3,45 +3,62 @@ package src.data;
 import src.data.enums.Block;
 import src.data.exceptions.MineLimitExceededException;
 import src.data.utils.image_analysis.BoardAnalyzer;
+import src.data.utils.image_analysis.PixelTileAnalyzer;
 import src.data.utils.image_analysis.TileAnalyzer;
 
 import java.awt.*;
 import java.awt.event.InputEvent;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
-// Facade Structural Design Pattern
+// Facade and Bridge Structural Design Pattern
 public class MinesweeperAI {
     private MinesweeperSolver minesweeperSolver;
     private MinesweeperRobot minesweeperRobot;
     private BoardAnalyzer boardAnalyzer;
     private int rows, cols, totalMines;
-    private Tile[][] board;
-    private final ArrayList<Tile> safeTiles, mineTiles;
+    private final Set<Tile> safeTiles, mineTiles;
+    public static boolean SAVE_BOARD_IMAGE = true;
+    public static String DIRECTORY_PATH = "src\\data\\temp\\";
 
-    public MinesweeperAI(int rows, int cols, int totalMines, MinesweeperSolver minesweeperSolver) {
+    public MinesweeperAI(int rows, int cols, int totalMines) {
         this.rows = rows;
         this.cols = cols;
         this.totalMines = totalMines;
-        this.minesweeperSolver = minesweeperSolver;
-        safeTiles = new ArrayList<>();
-        mineTiles = new ArrayList<>();
+        safeTiles = new HashSet<>();
+        mineTiles = new HashSet<>();
     }
 
     public Tile[][] scanBoardImage(Rectangle selectedRegion, TileAnalyzer tileAnalyzer) throws AWTException {
         minesweeperRobot = new MinesweeperRobot(selectedRegion);
         boardAnalyzer = new BoardAnalyzer(minesweeperRobot.captureBoardImage(), tileAnalyzer, rows, cols);
+        if (SAVE_BOARD_IMAGE) {
+            boardAnalyzer.saveImage(DIRECTORY_PATH + "MinesweeperBoard.png");
+        }
         if (boardAnalyzer.getKnownMines() > totalMines) {
             throw new MineLimitExceededException();
         }
-        board = minesweeperSolver.solveBoard(boardAnalyzer.analyzeBoardImage(), totalMines - boardAnalyzer.getKnownMines());
-        minesweeperSolver.displayBoard(board);
-        minesweeperSolver.displayProbability(board);
-        updateSafeAndMineTiles();
-        return board;
+        return boardAnalyzer.analyzeBoardImage();
     }
 
-    private void updateSafeAndMineTiles() {
+    public Tile[][] solveBoard(Tile[][] board, MinesweeperSolver minesweeperSolver) {
+        this.minesweeperSolver = minesweeperSolver;
+        Tile[][] solveBoard = minesweeperSolver.solveBoard(board, totalMines - boardAnalyzer.getKnownMines());
+        minesweeperSolver.displayBoard(board);
+        minesweeperSolver.displayProbability(board);
+        updateSafeAndMineTiles(board);
+        return solveBoard;
+    }
+
+    public boolean isSolved() {
+        return boardAnalyzer.getFlaggedMines() == totalMines;
+    }
+
+    public boolean isGameOver() {
+        return boardAnalyzer.getKnownMines() - boardAnalyzer.getFlaggedMines() != 0;
+    }
+
+    private void updateSafeAndMineTiles(Tile[][] board) {
         resetSafeAndMineTiles();
         for (Tile[] rows : board) {
             for (Tile tile : rows) {
@@ -52,11 +69,6 @@ public class MinesweeperAI {
                 }
             }
         }
-    }
-
-    public void shuffleSafeAndMineTiles() {
-        Collections.shuffle(safeTiles);
-        Collections.shuffle(mineTiles);
     }
 
     private void resetSafeAndMineTiles() {
@@ -88,32 +100,69 @@ public class MinesweeperAI {
         }
     }
 
-    public ArrayList<Tile> getSafeTiles() {
-        return safeTiles;
+    public void setMouseMoveSteps(int steps) {
+        MinesweeperRobot.MOUSE_MOVE_STEPS = steps;
     }
 
-    public ArrayList<Tile> getMineTiles() {
-        return mineTiles;
+    public void setMouseMoveDelay(int delay) {
+        MinesweeperRobot.MOUSE_MOVE_DELAY = delay;
+    }
+
+    public void setPixelTolerance(int tolerance) {
+        PixelTileAnalyzer.PIXEL_TOLERANCE = tolerance;
+    }
+
+    public void setTileOffset(int offset) {
+        BoardAnalyzer.TILE_OFFSET = offset;
+    }
+
+    public void setSaveBoardImage(boolean toggle) {
+        SAVE_BOARD_IMAGE = toggle;
+    }
+
+    public void setSaveTileImage(boolean toggle) {
+        BoardAnalyzer.SAVE_TILE_IMAGE = toggle;
+    }
+
+    public void setDirectoryPath(String directoryPath) {
+        DIRECTORY_PATH = directoryPath;
+        BoardAnalyzer.DIRECTORY_PATH = directoryPath;
+    }
+
+    public int getKnownMines() {
+        return boardAnalyzer.getKnownMines();
+    }
+
+    public int getFlaggedMines() {
+        return boardAnalyzer.getFlaggedMines();
+    }
+
+    public int getOpenedTiles() {
+        return boardAnalyzer.getOpenedTiles();
+    }
+
+    public int getEmptyTiles() {
+        return boardAnalyzer.getEmptyTiles();
     }
 
     public MinesweeperRobot getMinesweeperRobot() {
         return minesweeperRobot;
     }
 
-    public BoardAnalyzer getBoardAnalyzer() {
-        return boardAnalyzer;
-    }
-
-    public Tile[][] getBoard() {
-        return board;
-    }
-
     public MinesweeperSolver getMinesweeperSolver() {
         return minesweeperSolver;
     }
 
-    public void setMinesweeperSolver(MinesweeperSolver minesweeperSolver) {
-        this.minesweeperSolver = minesweeperSolver;
+    public BoardAnalyzer getBoardAnalyzer() {
+        return boardAnalyzer;
+    }
+
+    public Set<Tile> getSafeTiles() {
+        return safeTiles;
+    }
+
+    public Set<Tile> getMineTiles() {
+        return mineTiles;
     }
 
     public int getRows() {
@@ -142,6 +191,13 @@ public class MinesweeperAI {
 
     @Override
     public String toString() {
-        return "MinesweeperAI{}";
+        return "MinesweeperAI{" +
+                "minesweeperSolver=" + minesweeperSolver +
+                ", minesweeperRobot=" + minesweeperRobot +
+                ", boardAnalyzer=" + boardAnalyzer +
+                ", rows=" + rows +
+                ", cols=" + cols +
+                ", totalMines=" + totalMines +
+                '}';
     }
 }

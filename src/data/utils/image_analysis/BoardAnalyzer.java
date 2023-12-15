@@ -12,27 +12,25 @@ public class BoardAnalyzer extends ImageAnalyzer {
     private final TileAnalyzer tileAnalyzer;
     private final Tile[][] board;
     private final int rows, cols, tileHeight, tileWidth;
-    private int knownMines, emptyTiles, openedTiles, tileCounter;
-
-    private static final int TILE_OFFSET = 0;
-    private static final double EMPTY_TILES_RATIO = 0.5;
+    private int knownMines, flaggedMines, emptyTiles, openedTiles, tileCounter;
+    public static boolean SAVE_TILE_IMAGE = true;
+    public static String DIRECTORY_PATH = "src\\data\\temp\\";
+    public static int TILE_OFFSET = 0;
+    public static final double EMPTY_TILES_RATIO = 0.5;
 
     public BoardAnalyzer(BufferedImage image, TileAnalyzer tileAnalyzer, int rows, int cols) {
         super(image);
-        saveImage("src\\data\\temp\\MinesweeperBoard.png");
         this.tileAnalyzer = tileAnalyzer;
         this.rows = rows;
         this.cols = cols;
-        System.out.println(((double) getHeight() / (double) rows) + " " + (double) (getWidth() / cols));
         tileHeight =  Math.ceilDiv(getHeight(), rows);
         tileWidth = Math.ceilDiv(getWidth(), cols);
-//        System.out.println(tileHeight + " " + tileWidth + " " + getHeight() + " " + getWidth());
         board = new Tile[rows][cols];
         initTileStatistics();
     }
 
     private void initTileStatistics() {
-        knownMines = emptyTiles = openedTiles = tileCounter = 0;
+        knownMines = flaggedMines = emptyTiles = openedTiles = tileCounter = 0;
     }
 
     public Tile[][] analyzeBoardImage() {
@@ -66,13 +64,18 @@ public class BoardAnalyzer extends ImageAnalyzer {
                 y * (tileHeight + TILE_OFFSET),
                 tileWidth - TILE_OFFSET,
                 tileHeight - TILE_OFFSET);
-        saveImage(crop, "src\\data\\temp\\tile" + (++tileCounter) + ".png");
+        if (SAVE_TILE_IMAGE) {
+            saveImage(crop,  DIRECTORY_PATH + "tile" + (++tileCounter) + ".png");
+        }
         return crop;
     }
 
     private void updateTileStatistics(Block state) {
         if (state == Block.FLAG || state == Block.MINE) {
             knownMines++;
+        }
+        if (state == Block.FLAG) {
+            flaggedMines++;
         }
         if (state == Block.EMPTY) {
             emptyTiles++;
@@ -100,5 +103,9 @@ public class BoardAnalyzer extends ImageAnalyzer {
 
     public int getOpenedTiles() {
         return openedTiles;
+    }
+
+    public int getFlaggedMines() {
+        return flaggedMines;
     }
 }

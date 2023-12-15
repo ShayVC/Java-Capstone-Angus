@@ -1,19 +1,25 @@
 package src.data.utils;
 
+import src.data.utils.ini_file_handler.IniFileHandler;
+import src.data.utils.ini_file_handler.IniFileWriter;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.IOException;
 
 public class DrawRegionOnScreen extends JFrame {
     private final Rectangle selectedRegion;
     private Point startPoint;
 
-    public DrawRegionOnScreen(Rectangle selectedRegion) throws AWTException {
-        this.selectedRegion = selectedRegion;
+    public final IniFileHandler iniFileHandler;
 
+    public DrawRegionOnScreen(String filepath) {
+        selectedRegion = new Rectangle();
+        iniFileHandler = new IniFileWriter(filepath);
         setUndecorated(true);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
@@ -32,12 +38,24 @@ public class DrawRegionOnScreen extends JFrame {
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                if (selectedRegion != null) {
-                    if (selectedRegion.width == 0 && selectedRegion.height == 0) {
-                        dispose();
-                    }
-                    selectedRegion.add(e.getPoint());
-                    repaint();
+                if (selectedRegion.width == 0 && selectedRegion.height == 0) {
+                    dispose();
+                }
+                selectedRegion.add(e.getPoint());
+                repaint();
+                try {
+                    int x = (int) selectedRegion.getX();
+                    int y = (int) selectedRegion.getY();
+                    int width = (int) selectedRegion.getWidth();
+                    int height = (int) selectedRegion.getHeight();
+                    iniFileHandler.setProperty("x", String.valueOf(x));
+                    iniFileHandler.setProperty("y", String.valueOf(y));
+                    iniFileHandler.setProperty("width", String.valueOf(width));
+                    iniFileHandler.setProperty("height", String.valueOf(height));
+                    iniFileHandler.processFile();
+                } catch (IOException ex) {
+                    JOptionPane.showMessageDialog(null,"Failed to set configSelectedRegion.ini!", "Error", JOptionPane.ERROR_MESSAGE);
+                    throw new RuntimeException(ex);
                 }
                 dispose();
             }
